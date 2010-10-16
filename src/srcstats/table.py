@@ -18,13 +18,17 @@ class Column(object):
         self.align = align
 
     def justified_header(self, append_pipe=True):
-        return self.justified_data(self.header,
-                                   self.width - 2 if append_pipe else None) + \
-                                   (' |' if append_pipe else '')
+        return self.justified_data(self.header, append_pipe)
     
-    def justified_data(self, data, width=None):
-        width = self.width if width is None else width
-        return self.justifiers[self.align](data, width)[-width:]
+    def justified_data(self, data, append_pipe=True):
+        width = self.width - 2 if append_pipe else self.width
+
+        data = '%s%s%s' % (' ' if self.align == 'l' else '',
+                           data,
+                           ' ' if self.align == 'r' and not append_pipe else '')
+        
+        return (self.justifiers[self.align](data, width)[-width:] +
+                (' |' if append_pipe else ''))
     
 
 class Table(object):
@@ -57,4 +61,13 @@ class Table(object):
         s = ''
         for index, col in zip(itertools.count(), self.columns):
             s += col.justified_header(index < len(self.columns)-1)
+        return s
+
+    def separator(self, char='='):
+        return char*self.width
+
+    def row(self, row):
+        s = ''
+        for index, col, row in zip(itertools.count(), self.columns, row):
+            s += col.justified_data(str(row), index < len(self.columns)-1)
         return s
