@@ -5,14 +5,20 @@ import math
 
 from languages import Language
 from linecounter import count_file
+from table import Table, Column
 
 def main_func():
     if len(sys.argv) == 1:
         print >>sys.stderr, 'Usage: %s filename [filename ...]'
         return 1
 
-    print ' Filename%sSource | Comment | Blank  |  Total' % (' '*37, )
-    print '='*80
+    table = Table((Column('Filename', align='l'),
+                   Column('Source', 9, align='r'),
+                   Column('Blank', 9, align='r'),
+                   Column('Total', 9, align='r')))
+
+    print table.header()
+    print table.separator()
 
     source_total = 0
     comment_total = 0
@@ -30,21 +36,16 @@ def main_func():
         comment_total += result.comment
         blank_total += result.blank
 
-        print '%s%s%s | %s | %s  |  %s' % (filename[-46:],
-                                           ' '*(max(0, 46-len(filename))),
-                                           str(result.source).rjust(6),
-                                           str(result.comment).rjust(7),
-                                           str(result.blank).rjust(5),
-                                           str(result.source +
-                                               result.comment +
-                                               result.blank).rjust(5))
+        print table.row((filename,
+                         result.source,
+                         result.comment,
+                         result.blank,
+                         result.source + result.comment + result.blank))
 
     if len(sys.argv) > 2:
-        print '='*80
-        print ' Total%s%s | %s | %s  |  %s' % (' '*40,
-                                               str(source_total).rjust(6),
-                                               str(comment_total).rjust(7),
-                                               str(blank_total).rjust(5),
-                                               str(source_total +
-                                                   comment_total +
-                                                   blank_total).rjust(5))
+        print table.separator()
+        print table.row(('Total',
+                         source_total,
+                         comment_total,
+                         blank_total,
+                         source_total + comment_total + blank_total))
