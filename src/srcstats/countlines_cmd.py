@@ -85,5 +85,5 @@ def main_func():
     if options.by_language:
         print_language_stats(table, language_stats)
 
-    if len(sys.argv) > 2:
+    if len(language_stats) > 1 or (not options.by_language and len(args) > 1):
         print_totals(table, totals)
