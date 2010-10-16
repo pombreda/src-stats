@@ -4,11 +4,12 @@ import sys
 import math
 
 from optparse import OptionParser
+from cStringIO import StringIO
 
 from languages import Language
 from linecounter import count_file, Result
 from table import Table, Column
-
+from vcs import VcsWrapper
 
 parser = OptionParser('usage: %prog [options] file [file ...]')
 parser.add_option('-l', '--by-language',
@@ -44,6 +45,26 @@ def print_language_stats(table, language_stats):
     for lang, stats in items:
         print_result_set(table, lang.name, stats)
 
+def process_file(table, options, language_stats, totals, filename, stream):
+    lang = Language.from_filename(filename)
+
+    if not lang:
+        return False
+    
+    result = count_file(stream, lang)
+    
+    add_results(totals, result)
+    
+    if options.by_language:
+        if lang not in language_stats:
+            language_stats[lang] = Result()
+            
+        add_results(language_stats[lang], result)
+    else:
+        print_result_set(table, filename, result)
+
+    return True
+
 def main_func():
     (options, args) = parser.parse_args()
 
@@ -63,27 +84,28 @@ def main_func():
     totals = Result()
 
     language_stats = {}
+    files_processed = 0
 
-    for filename in sys.argv[1:]:
-        lang = Language.from_filename(filename)
+    for filename in args:
+        try:
+            could_process = process_file(table, options, language_stats, totals, filename, open(filename))
+        except IOError:
+            could_process = False
 
-        if not lang:
-            continue
+        if not could_process:
+            vcs = VcsWrapper.vcs_for_path(filename)
 
-        result = count_file(open(filename), lang)
+            if not vcs:
+                continue
 
-        add_results(totals, result)
-
-        if options.by_language:
-            if lang not in language_stats:
-                language_stats[lang] = Result()
-
-            add_results(language_stats[lang], result)
+            for f in vcs.head.file_iter:
+                if process_file(table, options, language_stats, totals, f.path, StringIO(f.stream.read())):
+                    files_processed += 1
         else:
-            print_result_set(table, filename, result)
+            files_processed += 1
 
     if options.by_language:
         print_language_stats(table, language_stats)
 
-    if len(language_stats) > 1 or (not options.by_language and len(args) > 1):
+    if len(language_stats) > 1 or (not options.by_language and files_processed):
         print_totals(table, totals)
